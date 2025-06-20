@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benchmark Étendu - Détection de SNPs</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .header p {
+            font-size: 1.3em;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .stat-box {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .stat-box h3 {
+            font-size: 2.2em;
+            margin-bottom: 8px;
+        }
+        
+        .stat-box p {
+            font-size: 1.1em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .metric-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+        
+        .metric-card h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+            text-align: center;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 350px;
+            margin-bottom: 20px;
+        }
+        
+        .performance-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 30px;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            font-size: 0.9em;
+        }
+        
+        .performance-table th,
+        .performance-table td {
+            padding: 12px 8px;
+            text-align: center;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .performance-table th {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.8em;
+        }
+        
+        .performance-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        .performance-table tr:hover {
+            background-color: #e3f2fd;
+            transform: scale(1.005);
+            transition: all 0.3s ease;
+        }
+        
+        .best-score {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            font-weight: bold;
+            border-radius: 6px;
+            padding: 4px 8px;
+        }
+        
+        .your-software {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            color: white;
+            font-weight: bold;
+        }
+        
+        .second-best {
+            background: linear-gradient(45deg, #FFA726, #FF7043);
+            color: white;
+            font-weight: bold;
+            border-radius: 6px;
+            padding: 4px 8px;
+        }
+        
+        .third-best {
+            background: linear-gradient(45deg, #AB47BC, #8E24AA);
+            color: white;
+            font-weight: bold;
+            border-radius: 6px;
+            padding: 4px 8px;
+        }
+        
+        .category-header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .conclusions {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            padding: 30px;
+            border-radius: 15px;
+            margin-top: 40px;
+        }
+        
+        .conclusions h2 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.8em;
+        }
+        
+        .conclusions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .conclusion-item {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 5px solid #667eea;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .ranking-section {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            padding: 25px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+        
+        .ranking-section h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.6em;
+        }
+        
+        .podium {
+            display: flex;
+            justify-content: center;
+            align-items: end;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .podium-item {
+            text-align: center;
+            padding: 20px;
+            border-radius: 15px;
+            color: white;
+            font-weight: bold;
+            min-width: 120px;
+        }
+        
+        .first-place {
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            height: 120px;
+            order: 2;
+        }
+        
+        .second-place {
+            background: linear-gradient(45deg, #C0C0C0, #808080);
+            height: 100px;
+            order: 1;
+        }
+        
+        .third-place {
+            background: linear-gradient(45deg, #CD7F32, #8B4513);
+            height: 80px;
+            order: 3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧬 Benchmark Complet - Détection de SNPs</h1>
+            <p>Comparaison étendue avec 18 logiciels du marché</p>
+        </div>
+        
+        <div class="stats-overview">
+            <div class="stat-box">
+                <h3>18</h3>
+                <p>Logiciels testés</p>
+            </div>
+            <div class="stat-box">
+                <h3>50K</h3>
+                <p>SNPs analysés</p>
+            </div>
+            <div class="stat-box">
+                <h3>4</h3>
+                <p>Métriques clés</p>
+            </div>
+            <div class="stat-box">
+                <h3>30x</h3>
+                <p>Couverture</p>
+            </div>
+        </div>
+        
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <h3>📈 Sensibilité (%)</h3>
+                <div class="chart-container">
+                    <canvas id="sensitivityChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="metric-card">
+                <h3>🎯 Spécificité (%)</h3>
+                <div class="chart-container">
+                    <canvas id="specificityChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="metric-card">
+                <h3>⚡ Temps d'exécution (min)</h3>
+                <div class="chart-container">
+                    <canvas id="timeChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="metric-card">
+                <h3>💾 Utilisation Mémoire (GB)</h3>
+                <div class="chart-container">
+                    <canvas id="memoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="ranking-section">
+            <h2>🏆 Podium des Performances</h2>
+            <div class="podium" id="podium">
+            </div>
+        </div>
+        
+        <table class="performance-table">
+            <thead>
+                <tr>
+                    <th>Rang</th>
+                    <th>Logiciel</th>
+                    <th>Catégorie</th>
+                    <th>Sensibilité (%)</th>
+                    <th>Spécificité (%)</th>
+                    <th>Temps (min)</th>
+                    <th>Mémoire (GB)</th>
+                    <th>Score Global</th>
+                </tr>
+            </thead>
+            <tbody id="performanceTableBody">
+            </tbody>
+        </table>
+        
+        <div class="conclusions">
+            <h2>🎯 Analyse Comparative Détaillée</h2>
+            <div class="conclusions-grid" id="conclusionsGrid">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Données étendues de performance simulées
+        const performanceData = {
+            // Variant Calling spécialisés
+            'Votre Logiciel': {
+                category: 'Variant Calling',
+                sensitivity: 94.2,
+                specificity: 99.1,
+                time: 23,
+                memory: 4.2,
+                color: '#FF6B6B'
+            },
+            'GATK HaplotypeCaller': {
+                category: 'Variant Calling',
+                sensitivity: 92.1,
+                specificity: 98.9,
+                time: 45,
+                memory: 8.5,
+                color: '#4ECDC4'
+            },
+            'FreeBayes': {
+                category: 'Variant Calling',
+                sensitivity: 89.3,
+                specificity: 97.8,
+                time: 38,
+                memory: 6.1,
+                color: '#45B7D1'
+            },
+            'VarScan2': {
+                category: 'Variant Calling',
+                sensitivity: 87.6,
+                specificity: 98.2,
+                time: 29,
+                memory: 3.8,
+                color: '#96CEB4'
+            },
+            'SAMtools mpileup': {
+                category: 'Variant Calling',
+                sensitivity: 85.9,
+                specificity: 97.1,
+                time: 52,
+                memory: 5.7,
+                color: '#FFEAA7'
+            },
+            'DeepVariant': {
+                category: 'AI/ML',
+                sensitivity: 93.7,
+                specificity: 99.3,
+                time: 67,
+                memory: 12.3,
+                color: '#DDA0DD'
+            },
+            'Strelka2': {
+                category: 'Variant Calling',
+                sensitivity: 90.4,
+                specificity: 98.6,
+                time: 34,
+                memory: 7.2,
+                color: '#87CEEB'
+            },
+            'Mutect2': {
+                category: 'Somatic',
+                sensitivity: 88.7,
+                specificity: 97.9,
+                time: 56,
+                memory: 9.1,
+                color: '#F0E68C'
+            },
+            
+            // Aligneurs avec détection SNP
+            'BWA-MEM + bcftools': {
+                category: 'Pipeline',
+                sensitivity: 84.2,
+                specificity: 96.8,
+                time: 41,
+                memory: 6.8,
+                color: '#FFB6C1'
+            },
+            'Bowtie2 + SAMtools': {
+                category: 'Pipeline',
+                sensitivity: 82.9,
+                specificity: 96.1,
+                time: 48,
+                memory: 5.9,
+                color: '#20B2AA'
+            },
+            'HISAT2 + StringTie': {
+                category: 'RNA-seq',
+                sensitivity: 79.3,
+                specificity: 95.2,
+                time: 35,
+                memory: 4.7,
+                color: '#9370DB'
+            },
+            
+            // Outils de recherche adaptés
+            'BLAST+ (megablast)': {
+                category: 'Recherche',
+                sensitivity: 76.1,
+                specificity: 92.3,
+                time: 128,
+                memory: 15.6,
+                color: '#FF4500'
+            },
+            'DIAMOND': {
+                category: 'Recherche',
+                sensitivity: 73.8,
+                specificity: 91.7,
+                time: 89,
+                memory: 11.2,
+                color: '#32CD32'
+            },
+            'MMseqs2': {
+                category: 'Recherche',
+                sensitivity: 75.2,
+                specificity: 92.9,
+                time: 76,
+                memory: 8.9,
+                color: '#FF69B4'
+            },
+            
+            // Outils spécialisés
+            'Platypus': {
+                category: 'Variant Calling',
+                sensitivity: 86.8,
+                specificity: 97.4,
+                time: 42,
+                memory: 7.8,
+                color: '#40E0D0'
+            },
+            'LoFreq': {
+                category: 'Low Frequency',
+                sensitivity: 91.2,
+                specificity: 98.7,
+                time: 73,
+                memory: 6.4,
+                color: '#DA70D6'
+            },
+            'VarDict': {
+                category: 'Variant Calling',
+                sensitivity: 88.9,
+                specificity: 98.1,
+                time: 39,
+                memory: 5.3,
+                color: '#7FFF00'
+            },
+            'Octopus': {
+                category: 'Bayesian',
+                sensitivity: 90.7,
+                specificity: 98.4,
+                time: 58,
+                memory: 9.7,
+                color: '#FF1493'
+            }
+        };
+
+        // Calcul du score global pondéré
+        Object.keys(performanceData).forEach(tool => {
+            const data = performanceData[tool];
+            // Score privilégiant sensibilité, spécificité, rapidité et efficacité mémoire
+            data.globalScore = (
+                data.sensitivity * 0.35 +      // 35% sensibilité
+                data.specificity * 0.35 +      // 35% spécificité  
+                (150 - data.time) * 0.15 +     // 15% rapidité (inversé)
+                (20 - data.memory) * 0.15      // 15% efficacité mémoire (inversé)
+            );
+        });
+
+        // Fonction pour créer les graphiques horizontaux
+        function createHorizontalChart(canvasId, label, dataKey, isTime = false) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            const sortedTools = Object.keys(performanceData).sort((a, b) => {
+                if (isTime) {
+                    return performanceData[a][dataKey] - performanceData[b][dataKey]; // Plus petit = meilleur
+                }
+                return performanceData[b][dataKey] - performanceData[a][dataKey]; // Plus grand = meilleur
+            });
+            
+            const data = sortedTools.map(tool => performanceData[tool][dataKey]);
+            const colors = sortedTools.map(tool => performanceData[tool].color);
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: sortedTools,
+                    datasets: [{
+                        label: label,
+                        data: data,
+                        backgroundColor: colors,
+                        borderColor: colors,
+                        borderWidth: 2,
+                        borderRadius: 6,
+                        borderSkipped: false,
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                font: {
+                                    size: 11
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 2000,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        }
+
+        // Créer tous les graphiques
+        createHorizontalChart('sensitivityChart', 'Sensibilité (%)', 'sensitivity');
+        createHorizontalChart('specificityChart', 'Spécificité (%)', 'specificity');
+        createHorizontalChart('timeChart', 'Temps (min)', 'time', true);
+        createHorizontalChart('memoryChart', 'Mémoire (GB)', 'memory', true);
+
+        // Créer le podium
+        function createPodium() {
+            const podium = document.getElementById('podium');
+            const sortedTools = Object.keys(performanceData).sort((a, b) => 
+                performanceData[b].globalScore - performanceData[a].globalScore
+            );
+
+            const podiumData = [
+                { tool: sortedTools[1], class: 'second-place', medal: '🥈' },
+                { tool: sortedTools[0], class: 'first-place', medal: '🥇' },
+                { tool: sortedTools[2], class: 'third-place', medal: '🥉' }
+            ];
+
+            podiumData.forEach(item => {
+                const div = document.createElement('div');
+                div.className = `podium-item ${item.class}`;
+                div.innerHTML = `
+                    <div style="font-size: 2em; margin-bottom: 10px;">${item.medal}</div>
+                    <div style="font-size: 1.1em; margin-bottom: 5px;">${item.tool}</div>
+                    <div style="font-size: 0.9em;">${performanceData[item.tool].globalScore.toFixed(1)}</div>
+                `;
+                podium.appendChild(div);
+            });
+        }
+
+        // Remplir le tableau de performance
+        function fillPerformanceTable() {
+            const tbody = document.getElementById('performanceTableBody');
+            
+            // Trier par score global
+            const sortedTools = Object.keys(performanceData).sort((a, b) => 
+                performanceData[b].globalScore - performanceData[a].globalScore
+            );
+
+            sortedTools.forEach((tool, index) => {
+                const data = performanceData[tool];
+                const row = document.createElement('tr');
+                
+                if (tool === 'Votre Logiciel') {
+                    row.className = 'your-software';
+                }
+                
+                let scoreClass = '';
+                if (index === 0) scoreClass = 'best-score';
+                else if (index === 1) scoreClass = 'second-best';
+                else if (index === 2) scoreClass = 'third-best';
+                
+                row.innerHTML = `
+                    <td><strong>#${index + 1}</strong></td>
+                    <td><strong>${tool}</strong></td>
+                    <td><span class="category-tag">${data.category}</span></td>
+                    <td>${data.sensitivity.toFixed(1)}%</td>
+                    <td>${data.specificity.toFixed(1)}%</td>
+                    <td>${data.time} min</td>
+                    <td>${data.memory} GB</td>
+                    <td class="${scoreClass}">${data.globalScore.toFixed(1)}</td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        // Générer les conclusions détaillées
+        function generateConclusions() {
+            const conclusionsGrid = document.getElementById('conclusionsGrid');
+            const yourSoftware = performanceData['Votre Logiciel'];
+            
+            const sortedTools = Object.keys(performanceData).sort((a, b) => 
+                performanceData[b].globalScore - performanceData[a].globalScore
+            );
+            const yourRank = sortedTools.indexOf('Votre Logiciel') + 1;
+            
+            const conclusions = [
+                {
+                    title: "🏆 Classement Global",
+                    content: `Votre logiciel se classe #${yourRank} sur 18 outils testés avec un score de ${yourSoftware.globalScore.toFixed(1)}/100`
+                },
+                {
+                    title: "📊 Performance Sensibilité",
+                    content: `94.2% de sensibilité - Top 3 dans cette catégorie, surpassant des outils établis comme FreeBayes (89.3%)`
+                },
+                {
+                    title: "🎯 Excellence Spécificité", 
+                    content: `99.1% de spécificité - Excellent contrôle des faux positifs, comparable à DeepVariant`
+                },
+                {
+                    title: "⚡ Avantage Vitesse",
+                    content: `23 minutes d'exécution - 2x plus rapide que GATK, 3x plus rapide que DeepVariant`
+                },
+                {
+                    title: "💾 Efficacité Mémoire",
+                    content: `4.2 GB RAM - Très économe, permettant déploiement sur infrastructures standard`
+                },
+                {
+                    title: "🆚 vs BLAST",
+                    content: `Performance supérieure: +18% sensibilité, +7% spécificité, 5x plus rapide, 4x moins de mémoire`
+                },
+                {
+                    title: "🧬 vs Outils Spécialisés",
+                    content: `Comparable aux meilleurs variant callers avec l'avantage d'une empreinte système réduite`
+                },
+                {
+                    title: "💡 Positionnement Marché",
+                    content: `Idéal pour analyses haute-fréquence nécessitant précision et efficacité opérationnelle`
+                }
+            ];
+            
+            conclusions.forEach(conclusion => {
+                const div = document.createElement('div');
+                div.className = 'conclusion-item';
+                div.innerHTML = `
+                    <h3 style="margin-bottom: 10px; color: #667eea;">${conclusion.title}</h3>
+                    <p>${conclusion.content}</p>
+                `;
+                conclusionsGrid.appendChild(div);
+            });
+        }
+
+        // Initialiser tous les éléments
+        createPodium();
+        fillPerformanceTable();
+        generateConclusions();
+
+        // Animation d'entrée progressive
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.metric-card');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(30px)';
+                setTimeout(() => {
+                    card.style.transition = 'all 0.8s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 300);
+            });
+        });
+    </script>
+</body>
+</html>
